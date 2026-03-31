@@ -8,7 +8,6 @@ import numpy as np
 import os
 import sys
 
-# --- Resources Handling ---
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -158,17 +157,14 @@ class RockScannerApp(tk.Tk):
             line = tk.Frame(self.results_container, bg=Style.BLOCK_COLOR, padx=12, pady=10, bd=1, relief="flat")
             line.pack(fill=tk.X)
             
-            # Gauche : Mult + Nom
             tk.Label(line, text=f"{best['mult']}x {best['name'].upper()}", 
                      fg=Style.GOLD_COLOR, bg=Style.BLOCK_COLOR, 
                      font=(Style.FONT_FAMILY, 14, "bold")).pack(side=tk.LEFT)
             
-            # Droite : Signal
             tk.Label(line, text=f"Sig: {best['sig']}", 
                      fg=Style.ACCENT_COLOR, bg=Style.BLOCK_COLOR, 
                      font=(Style.FONT_FAMILY, 10)).pack(side=tk.RIGHT)
         else:
-            # Undefined centré
             tk.Label(self.results_container, text="// --- Undefined --- //", 
                      fg="#444", bg=Style.BLOCK_COLOR, 
                      font=(Style.FONT_FAMILY, 11, "italic"), padx=12, pady=10, bd=1, relief="flat").pack(fill=tk.X)
