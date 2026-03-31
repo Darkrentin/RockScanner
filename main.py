@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import os
 
-# Set tesseract path
+# --- Configuration ---
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 LOGO_PATH = 'logo.png'
 
@@ -33,16 +33,11 @@ class RockScannerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("SC RockScanner Pro")
-
-        WIN_HEIGHT = 500
-        WIN_WIDTH = 450
-
-        self.geometry(str(WIN_WIDTH)+"x"+str(WIN_HEIGHT))
+        self.geometry("450x500")
         self.config(bg=Style.BG_COLOR)
         self.attributes('-topmost', True)
         self.current_img_ref = None
         
-        # Load logo and prepare edges
         if not os.path.exists(LOGO_PATH):
             messagebox.showerror("Error", "Logo file missing")
             self.destroy()
@@ -56,23 +51,39 @@ class RockScannerApp(tk.Tk):
         self.scan_loop()
 
     def setup_ui(self):
+        # Top status
         self.status_label = tk.Label(self, text="INITIALIZING", fg=Style.ACCENT_COLOR, bg=Style.BG_COLOR, font=(Style.FONT_FAMILY, 10, "bold"))
-        self.status_label.pack(pady=10)
+        self.status_label.pack(pady=5)
 
-        self.ocr_label = tk.Label(self, text="---", font=(Style.FONT_FAMILY, 24, "bold"), fg=Style.GOLD_COLOR, bg=Style.BG_COLOR)
-        self.ocr_label.pack(pady=5)
+        # Main Header Frame
+        self.header_frame = tk.Frame(self, bg=Style.BG_COLOR, height=100)
+        self.header_frame.pack(fill=tk.X, padx=10, pady=5)
+        self.header_frame.pack_propagate(False)
 
-        self.image_frame = tk.Frame(self, bg=Style.BLOCK_COLOR, bd=1, relief="solid")
-        self.image_frame.pack(pady=10, padx=20, fill=tk.X)
-        self.current_image_label = tk.Label(self.image_frame, bg=Style.BLOCK_COLOR, text="NO SIGNAL", fg="#555")
-        self.current_image_label.pack(pady=5)
+        self.header_frame.columnconfigure(0, weight=1, uniform="group1")
+        self.header_frame.columnconfigure(1, weight=1, uniform="group1")
 
+        # LEFT SLOT: OCR Number
+        self.ocr_label = tk.Label(self.header_frame, text="---", font=(Style.FONT_FAMILY, 28, "bold"), fg=Style.GOLD_COLOR, bg=Style.BG_COLOR)
+        self.ocr_label.grid(row=0, column=0, sticky="nsew")
+
+        # RIGHT SLOT: Image Container
+        self.image_slot = tk.Frame(self.header_frame, bg=Style.BG_COLOR)
+        self.image_slot.grid(row=0, column=1, sticky="nsew")
+        
+        # Border inside the slot
+        self.image_border = tk.Frame(self.image_slot, bg=Style.BLOCK_COLOR, bd=1, relief="solid")
+        self.image_border.place(relx=0.5, rely=0.5, anchor="center") # Perfectly centered in its 50%
+        
+        self.current_image_label = tk.Label(self.image_border, bg=Style.BLOCK_COLOR, text="OFFLINE", fg="#555")
+        self.current_image_label.pack(padx=2, pady=2)
+
+        # Bottom Results
         self.results_frame = tk.Frame(self, bg=Style.BG_COLOR)
         self.results_frame.pack(fill=tk.BOTH, expand=True, padx=20)
 
     def process_ocr(self, cv_img):
         if cv_img is None: return None
-        # Preprocess image for ocr
         gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
         _, thresh = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY_INV)
@@ -82,16 +93,14 @@ class RockScannerApp(tk.Tk):
         config = r'--oem 3 --psm 7 -c tessedit_char_whitelist=0123456789.,'
         text = pytesseract.image_to_string(thresh, config=config)
         digits = "".join(filter(str.isdigit, text))
-        
         try: return int(digits) if digits else None
         except ValueError: return None
 
     def scan_loop(self):
         try:
             with mss.mss() as sct:
-                # Capture screen center
-                MONITOR=1
-                mon = sct.monitors[MONITOR]
+                mon = sct.monitors[1]
+                # Center search ROI
                 search_area = {
                     "top": mon["height"] // 4,
                     "left": mon["width"] // 4,
@@ -102,30 +111,25 @@ class RockScannerApp(tk.Tk):
                 sct_img = sct.grab(search_area)
                 frame = np.array(sct_img)
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-                
-                # Get edges for matching
                 gray_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
                 edges_frame = cv2.Canny(gray_frame, 50, 150)
 
-                # Find logo
                 res = cv2.matchTemplate(edges_frame, self.template_edges, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
 
-                THRESHOLD = 0.25
-                if max_val > THRESHOLD:
+                if max_val > 0.25:
                     self.status_label.config(text=f"LOCKED ({int(max_val*100)}%)", fg="#00FF00")
                     x, y = max_loc
                     
-                    # Crop number area next to logo
+                    # Increased crop width to 180 to avoid "shriveled" look
                     crop_x = x + self.t_w
-                    crop_y = y
-                    crop_w = 75
-                    crop_h = self.t_h
+                    crop_y = y - 3
+                    crop_w = 75 
+                    crop_h = self.t_h + 5
+                    
                     crop_img = frame_bgr[max(0,crop_y):crop_y+crop_h, crop_x:crop_x+crop_w]
                     
                     val = self.process_ocr(crop_img)
-                    
-                    # Calculate results
                     possibilities = []
                     if val and val > 100:
                         for sig_base, name in MINING_DATA.items():
@@ -133,9 +137,8 @@ class RockScannerApp(tk.Tk):
                                 possibilities.append({"name": name, "mult": val // sig_base, "sig": sig_base})
                     
                     if not possibilities:
-                        possibilities.append({"name": "Undefined", "mult": 0, "sig": 0})
+                        possibilities.append({"name": "Scanning...", "mult": 0, "sig": 0})
                     
-                    # Update ui
                     img_display = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
                     self.display_results(val, possibilities, Image.fromarray(img_display))
                 else:
@@ -149,26 +152,23 @@ class RockScannerApp(tk.Tk):
 
     def display_results(self, raw_number, results, pil_img):
         if pil_img:
-            # Resize preview
-            resized = ImageOps.contain(pil_img, (350, 60))
+            # Better resizing logic to preserve shape
+            resized = ImageOps.contain(pil_img, (180, 80))
             tk_photo = ImageTk.PhotoImage(resized)
             self.current_image_label.config(image=tk_photo, text="")
             self.current_img_ref = tk_photo
         else:
-            self.current_image_label.config(image="", text="LOST SIGNAL")
+            self.current_image_label.config(image="", text="SIGNAL LOST")
 
         self.ocr_label.config(text=f"{raw_number if raw_number else '---'}")
 
-        # Clear and rebuild list
         for widget in self.results_frame.winfo_children():
             widget.destroy()
 
         for res in sorted(results, key=lambda x: x['mult'], reverse=True):
             f = tk.Frame(self.results_frame, bg=Style.BLOCK_COLOR, bd=1, relief="flat")
             f.pack(fill='x', pady=3)
-            
-            main_txt = f"{res['mult']}x {res['name']}"
-            tk.Label(f, text=main_txt, fg=Style.TEXT_COLOR, bg=Style.BLOCK_COLOR, font=(Style.FONT_FAMILY, 11, "bold")).pack(side=tk.LEFT, padx=10)
+            tk.Label(f, text=f"{res['mult']}x {res['name']}", fg=Style.TEXT_COLOR, bg=Style.BLOCK_COLOR, font=(Style.FONT_FAMILY, 11, "bold")).pack(side=tk.LEFT, padx=10)
             tk.Label(f, text=f"Base: {res['sig']}", fg=Style.ACCENT_COLOR, bg=Style.BLOCK_COLOR, font=(Style.FONT_FAMILY, 9)).pack(side=tk.RIGHT, padx=10)
 
 if __name__ == "__main__":
