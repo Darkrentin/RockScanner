@@ -33,7 +33,11 @@ class RockScannerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("SC RockScanner Pro")
-        self.geometry("450x500")
+
+        WIN_HEIGHT = 500
+        WIN_WIDTH = 450
+
+        self.geometry(str(WIN_WIDTH)+"x"+str(WIN_HEIGHT))
         self.config(bg=Style.BG_COLOR)
         self.attributes('-topmost', True)
         self.current_img_ref = None
@@ -86,7 +90,8 @@ class RockScannerApp(tk.Tk):
         try:
             with mss.mss() as sct:
                 # Capture screen center
-                mon = sct.monitors[1]
+                MONITOR=1
+                mon = sct.monitors[MONITOR]
                 search_area = {
                     "top": mon["height"] // 4,
                     "left": mon["width"] // 4,
@@ -106,7 +111,8 @@ class RockScannerApp(tk.Tk):
                 res = cv2.matchTemplate(edges_frame, self.template_edges, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, max_loc = cv2.minMaxLoc(res)
 
-                if max_val > 0.25:
+                THRESHOLD = 0.25
+                if max_val > THRESHOLD:
                     self.status_label.config(text=f"LOCKED ({int(max_val*100)}%)", fg="#00FF00")
                     x, y = max_loc
                     
