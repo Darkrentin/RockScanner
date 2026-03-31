@@ -6,10 +6,7 @@ import mss
 import cv2
 import numpy as np
 import os
-
-# --- Configuration ---
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-LOGO_PATH = 'logo.png'
+import sys
 
 MINING_DATA = {
     3170: "Quantainium", 3185: "Stileron", 3200: "Savrilium", 3370: "Ouratite",
@@ -20,6 +17,18 @@ MINING_DATA = {
     4225: "Corundum", 4240: "Copper", 4255: "Silicon", 4270: "Iron",
     4285: "Aluminium", 4300: "Ice", 2000: "Ship wrecks"
 }
+
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+TESS_FOLDER = resource_path("tesseract")
+pytesseract.pytesseract.tesseract_cmd = os.path.join(TESS_FOLDER, "tesseract.exe")
+LOGO_PATH = resource_path("logo.png")
 
 class Style:
     BG_COLOR = "#1C1C1E"
