@@ -10,6 +10,8 @@ def resource_path(relative_path):
 
 TESS_PATH = resource_path("tesseract")
 LOGO_PATH = resource_path("logo.png")
+ICON_PATH = resource_path("RockScannerLogo.ico")
+
 
 MINING_DATA = {
     3170: "Quantainium", 

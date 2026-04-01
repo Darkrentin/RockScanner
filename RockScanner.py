@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk, ImageOps
 import cv2
+import time
 
-from utils import Style, LOGO_PATH, MINING_DATA
+from utils import Style, LOGO_PATH, MINING_DATA, ICON_PATH
 from scanner import OcrScanner
 
 WIN_H = 150
@@ -12,15 +13,21 @@ WIN_W = 450
 TARGET_THRESHOLD = 0.25
 NUMBER_THRESHOLD = 1000
 LOOP_DELAY = 600
+MOVE_DELAY = 0.05
+
 
 class RockScannerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("RockScanner")
+        self.iconbitmap(ICON_PATH)
         self.geometry(str(WIN_W)+"x"+str(WIN_H))
         self.config(bg=Style.BG_COLOR)
         self.attributes("-topmost", True)
         self.current_img_ref = None
+        
+        self.last_move_time = 0
+        self.bind("<Configure>", self.on_window_move)
         
         # Check if logo exists before starting
         if not os.path.exists(LOGO_PATH):
@@ -31,6 +38,9 @@ class RockScannerApp(tk.Tk):
         self.scanner = OcrScanner(LOGO_PATH)
         self.setup_ui()
         self.scan_loop()
+    
+    def on_window_move(self, event):
+        self.last_move_time = time.time()
 
     def setup_ui(self):
         # Label for scan status
@@ -58,6 +68,11 @@ class RockScannerApp(tk.Tk):
         self.results_area.pack(fill=tk.X, padx=20, pady=5)
 
     def scan_loop(self):
+        if time.time() - self.last_move_time < MOVE_DELAY:
+            self.status_label.config(text="PAUSED (MOVING)", fg=Style.ACCENT_COLOR)
+            self.after(LOOP_DELAY, self.scan_loop)
+            return
+
         try:
             # Capture and search for logo
             frame = self.scanner.get_screen_frame()
