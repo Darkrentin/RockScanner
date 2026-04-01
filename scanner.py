@@ -40,8 +40,23 @@ class OcrScanner:
 
     def read_number(self, cv_img, save_name = "debug_bin.png"):
         gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+
+        if self.debug:
+            cv2.imshow("gray", gray)
+            cv2.waitKey(0)
+
         gray = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-        _, thresh = cv2.threshold(gray, 125, 255, cv2.THRESH_BINARY_INV)
+
+        if self.debug:
+            cv2.imshow("gray", gray)
+            cv2.waitKey(0)
+
+        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+
+        if self.debug:
+            cv2.imshow("thresh", thresh)
+            cv2.waitKey(0)
+
         kernel = np.ones((2, 2), np.uint8)
         thresh = cv2.dilate(thresh, kernel, iterations=1)
 
@@ -74,4 +89,7 @@ class OcrScanner:
 
 if __name__ == "__main__":
     scanner = OcrScanner("logo.png", True)
-    scanner.scan_folder("data")
+    print(scanner.read_from_file("data/7080.png"))
+    print(scanner.read_from_file("data/10000_2.png"))
+    print(scanner.read_from_file("data/17080.png"))
+    print(scanner.read_from_file("data/68000.png"))
