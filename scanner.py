@@ -4,6 +4,7 @@ import pytesseract
 import mss
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from utils import TESS_PATH, MINING_DATA
 
 pytesseract.pytesseract.tesseract_cmd = os.path.join(TESS_PATH, "tesseract.exe")
@@ -65,12 +66,15 @@ class OcrScanner:
             cv2.waitKey(1)
  
         votes = {}
-        for thresh_val in BINARIZE_THRESHOLDS:
-            for val, x, y in self._extract_numbers_from_gray(gray, thresh_val):
-                if val in votes:
-                    votes[val] = (votes[val][0] + 1, votes[val][1], votes[val][2])
-                else:
-                    votes[val] = (1, x, y)
+        with ThreadPoolExecutor(max_workers=len(BINARIZE_THRESHOLDS)) as pool:
+            futures = {pool.submit(self._extract_numbers_from_gray, gray, t): t
+                       for t in BINARIZE_THRESHOLDS}
+            for future in futures:
+                for val, x, y in future.result():
+                    if val in votes:
+                        votes[val] = (votes[val][0] + 1, votes[val][1], votes[val][2])
+                    else:
+                        votes[val] = (1, x, y)
  
         if not votes:
             return None
