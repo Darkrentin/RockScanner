@@ -33,17 +33,14 @@ class RockScannerApp(tk.Tk):
         self.last_move_time = 0
         self.bind("<Configure>", self.on_window_move)
 
-        # Queue used to pass results from the scan thread to the UI thread
         self.result_queue = queue.Queue()
 
         self.scanner = OcrScanner(debug=False)
         self.setup_ui()
 
-        # Start the background scan thread (daemon = killed automatically when app closes)
         self._scan_thread = threading.Thread(target=self._scan_worker, daemon=True)
         self._scan_thread.start()
 
-        # Poll the queue from the UI thread
         self._poll_results()
 
     def on_window_move(self, event):
@@ -52,19 +49,30 @@ class RockScannerApp(tk.Tk):
     def toggle_scan(self):
         self.scanning_active = not self.scanning_active
         if self.scanning_active:
-            self.toggle_btn.config(text="STOP", bg="#FF3B30")
+            self._draw_toggle(active=True)
             self.status_label.config(text="SCANNING", fg="#FF3B30")
         else:
-            self.toggle_btn.config(text="SCAN", bg=Style.ACCENT_COLOR)
+            self._draw_toggle(active=False)
             self.status_label.config(text="IDLE", fg="#555")
             self.update_display(None, [], None)
 
     def setup_ui(self):
+        top_bar = tk.Frame(self, bg=Style.BG_COLOR)
+        top_bar.pack(fill=tk.X, padx=20, pady=(10, 0))
+
+        self.toggle_canvas = tk.Canvas(
+            top_bar, width=52, height=26,
+            bg=Style.BG_COLOR, highlightthickness=0, cursor="hand2"
+        )
+        self.toggle_canvas.pack(side=tk.LEFT, padx=(0, 10))
+        self.toggle_canvas.bind("<Button-1>", lambda e: self.toggle_scan())
+        self._draw_toggle(active=False)
+
         self.status_label = tk.Label(
-            self, text="IDLE", fg="#555",
+            top_bar, text="IDLE", fg="#555",
             bg=Style.BG_COLOR, font=(Style.FONT_FAMILY, 12)
         )
-        self.status_label.pack(pady=5)
+        self.status_label.pack(side=tk.LEFT)
 
         self.header = tk.Frame(self, bg=Style.BG_COLOR)
         self.header.pack(fill=tk.X, padx=20, pady=10)
@@ -89,18 +97,36 @@ class RockScannerApp(tk.Tk):
         self.results_area = tk.Frame(self, bg=Style.BG_COLOR)
         self.results_area.pack(fill=tk.X, padx=20, pady=5)
 
-        self.toggle_btn = tk.Button(
-            self, text="SCAN",
-            fg=Style.BG_COLOR, bg=Style.ACCENT_COLOR,
-            font=(Style.FONT_FAMILY, 10, "bold"),
-            relief="flat", padx=16, pady=4,
-            cursor="hand2", command=self.toggle_scan
+    def _draw_toggle(self, active):
+        """Draw a hardware-style ON/OFF toggle switch on the canvas."""
+        c = self.toggle_canvas
+        c.delete("all")
+        W, H = 52, 26
+        R = H // 2
+
+        track_color = "#00BFFF" if active else "#3A3A3C"
+        c.create_arc(0, 0, H, H, start=90, extent=180, fill=track_color, outline=track_color)
+        c.create_arc(W - H, 0, W, H, start=270, extent=180, fill=track_color, outline=track_color)
+        c.create_rectangle(R, 0, W - R, H, fill=track_color, outline=track_color)
+
+        knob_x = W - R - 2 if active else R + 2
+
+        if active:
+            c.create_oval(
+                knob_x - R + 1, 1, knob_x + R - 3, H - 1,
+                fill="#005f7a", outline=""
+            )
+
+        # Knob
+        knob_color = "#FFFFFF" if active else "#8E8E93"
+        c.create_oval(
+            knob_x - R + 3, 3, knob_x + R - 5, H - 3,
+            fill=knob_color, outline=""
         )
-        self.toggle_btn.pack(pady=6)
 
     def _scan_worker(self):
         while True:
-            time.sleep(LOOP_DELAY / 1000)  # respect LOOP_DELAY (ms → s)
+            time.sleep(LOOP_DELAY / 1000)
 
             if not self.scanning_active:
                 continue
