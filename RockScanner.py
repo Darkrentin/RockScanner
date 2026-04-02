@@ -4,12 +4,14 @@ from PIL import Image, ImageTk, ImageOps
 import cv2
 import time
 import os
+import threading
+import queue
 
 from utils import Style, MINING_DATA, ICON_PATH, VERSION
 
 from scanner import OcrScanner
 
-WIN_H = 150
+WIN_H = 215
 WIN_W = 450
 
 NUMBER_THRESHOLD = 1000
@@ -27,13 +29,22 @@ class RockScannerApp(tk.Tk):
         self.attributes("-topmost", True)
         self.current_img_ref = None
         self.scanning_active = False
-        
+
         self.last_move_time = 0
         self.bind("<Configure>", self.on_window_move)
 
+        # Queue used to pass results from the scan thread to the UI thread
+        self.result_queue = queue.Queue()
+
         self.scanner = OcrScanner(debug=False)
         self.setup_ui()
-        self.scan_loop()
+
+        # Start the background scan thread (daemon = killed automatically when app closes)
+        self._scan_thread = threading.Thread(target=self._scan_worker, daemon=True)
+        self._scan_thread.start()
+
+        # Poll the queue from the UI thread
+        self._poll_results()
 
     def on_window_move(self, event):
         self.last_move_time = time.time()
@@ -87,44 +98,65 @@ class RockScannerApp(tk.Tk):
         )
         self.toggle_btn.pack(pady=6)
 
-    def scan_loop(self):
-        if not self.scanning_active:
-            self.after(LOOP_DELAY, self.scan_loop)
-            return
+    def _scan_worker(self):
+        while True:
+            time.sleep(LOOP_DELAY / 1000)  # respect LOOP_DELAY (ms → s)
 
-        if time.time() - self.last_move_time < MOVE_DELAY:
-            self.status_label.config(text="PAUSED (MOVING)", fg=Style.ACCENT_COLOR)
-            self.after(LOOP_DELAY, self.scan_loop)
-            return
+            if not self.scanning_active:
+                continue
 
+            if time.time() - self.last_move_time < MOVE_DELAY:
+                self.result_queue.put(("paused", None, None))
+                continue
+
+            try:
+                frame = self.scanner.get_screen_frame()
+                val, crop = self.scanner.scan_frame(frame)
+
+                if val is not None:
+                    results = []
+                    if val > NUMBER_THRESHOLD:
+                        for base, name in MINING_DATA.items():
+                            if val % base == 0:
+                                results.append({
+                                    "name": name,
+                                    "mult": val // base,
+                                    "sig": base
+                                })
+                    results.sort(key=lambda x: x["mult"], reverse=True)
+                    self.result_queue.put(("locked", val, results, crop))
+                else:
+                    self.result_queue.put(("scanning", None, None))
+
+            except Exception as e:
+                print(e)
+
+    def _poll_results(self):
         try:
-            frame = self.scanner.get_screen_frame()
+            while True:
+                item = self.result_queue.get_nowait()
 
-            val, crop = self.scanner.scan_frame(frame)
+                if not self.scanning_active:
+                    continue
 
-            if val is not None:
-                self.status_label.config(text="LOCKED", fg="#00FF00")
+                status = item[0]
 
-                results = []
-                if val > NUMBER_THRESHOLD:
-                    for base, name in MINING_DATA.items():
-                        if val % base == 0:
-                            results.append({
-                                "name": name,
-                                "mult": val // base,
-                                "sig": base
-                            })
+                if status == "paused":
+                    self.status_label.config(text="PAUSED (MOVING)", fg=Style.ACCENT_COLOR)
 
-                results.sort(key=lambda x: x["mult"], reverse=True)
-                self.update_display(val, results, crop)
-            else:
-                self.status_label.config(text="SCANNING", fg="#FF3B30")
-                self.update_display(None, [], None)
+                elif status == "locked":
+                    _, val, results, crop = item
+                    self.status_label.config(text="LOCKED", fg="#00FF00")
+                    self.update_display(val, results, crop)
 
-        except Exception as e:
-            print(e)
+                elif status == "scanning":
+                    self.status_label.config(text="SCANNING", fg="#FF3B30")
+                    self.update_display(None, [], None)
 
-        self.after(LOOP_DELAY, self.scan_loop)
+        except queue.Empty:
+            pass
+
+        self.after(50, self._poll_results)
 
     def update_display(self, number, results, cv_img):
         if cv_img is not None and cv_img.size > 0:
@@ -143,21 +175,25 @@ class RockScannerApp(tk.Tk):
             w.destroy()
 
         if results:
-            best = results[0]
-            line = tk.Frame(self.results_area, bg=Style.BLOCK_COLOR, padx=12, pady=10)
-            line.pack(fill=tk.X)
-            tk.Label(
-                line,
-                text=f"{best['mult']}x {best['name'].upper()}",
-                fg=Style.GOLD_COLOR, bg=Style.BLOCK_COLOR,
-                font=(Style.FONT_FAMILY, 14, "bold")
-            ).pack(side=tk.LEFT)
-            tk.Label(
-                line,
-                text=f"Sig: {best['sig']}",
-                fg=Style.ACCENT_COLOR, bg=Style.BLOCK_COLOR,
-                font=(Style.FONT_FAMILY, 10)
-            ).pack(side=tk.RIGHT)
+            for i, match in enumerate(results):
+                fg_name   = Style.GOLD_COLOR  if i == 0 else "#AAAAAA"
+                fg_sig    = Style.ACCENT_COLOR if i == 0 else "#555555"
+                font_size = 14 if i == 0 else 11
+ 
+                line = tk.Frame(self.results_area, bg=Style.BLOCK_COLOR, padx=12, pady=6)
+                line.pack(fill=tk.X, pady=(0, 2))
+                tk.Label(
+                    line,
+                    text=f"{match['mult']}x {match['name'].upper()}",
+                    fg=fg_name, bg=Style.BLOCK_COLOR,
+                    font=(Style.FONT_FAMILY, font_size, "bold")
+                ).pack(side=tk.LEFT)
+                tk.Label(
+                    line,
+                    text=f"Sig: {match['sig']}",
+                    fg=fg_sig, bg=Style.BLOCK_COLOR,
+                    font=(Style.FONT_FAMILY, 10)
+                ).pack(side=tk.RIGHT)
         else:
             tk.Label(
                 self.results_area,

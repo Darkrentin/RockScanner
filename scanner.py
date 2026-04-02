@@ -3,9 +3,20 @@ import numpy as np
 import pytesseract
 import mss
 import os
+import subprocess
 from utils import TESS_PATH, MINING_DATA
 
 pytesseract.pytesseract.tesseract_cmd = os.path.join(TESS_PATH, "tesseract.exe")
+
+if os.name == "nt":
+    _original_popen = subprocess.Popen
+ 
+    class _PopenNoWindow(subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            kwargs.setdefault("creationflags", subprocess.CREATE_NO_WINDOW)
+            super().__init__(*args, **kwargs)
+ 
+    subprocess.Popen = _PopenNoWindow
 
 MONITOR = 1
 
@@ -48,18 +59,28 @@ class OcrScanner:
         Returns (value, x, y) relative to the ROI, or None if nothing is found.
         """
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-
+ 
         if self.debug:
             cv2.imshow("ROI gray", gray)
             cv2.waitKey(1)
-
+ 
+        votes = {}
         for thresh_val in BINARIZE_THRESHOLDS:
-            candidates = self._extract_numbers_from_gray(gray, thresh_val)
-            for val, x, y in candidates:
-                if SIG_MIN <= val <= SIG_MAX:
-                    return val, x, y
-
-        return None
+            for val, x, y in self._extract_numbers_from_gray(gray, thresh_val):
+                if val in votes:
+                    votes[val] = (votes[val][0] + 1, votes[val][1], votes[val][2])
+                else:
+                    votes[val] = (1, x, y)
+ 
+        if not votes:
+            return None
+ 
+        best_val = max(
+            votes,
+            key=lambda v: (votes[v][0], -min(b for b in MINING_DATA if v % b == 0))
+        )
+        _, x, y = votes[best_val]
+        return best_val, x, y
 
     def _extract_numbers_from_gray(self, gray, threshold):
         """
@@ -91,6 +112,9 @@ class OcrScanner:
                     continue
                 if val < SIG_MIN or val > SIG_MAX:
                     continue
+                if not any(val % base == 0 for base in MINING_DATA):
+                    continue
+
                 # Convert coordinates back to original scale before the x3 upscale
                 x = data["left"][i] // 3
                 y = data["top"][i] // 3
