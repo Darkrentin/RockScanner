@@ -8,10 +8,15 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-TESS_PATH = resource_path("tesseract")
-LOGO_PATH = resource_path("logo.png")
-ICON_PATH = resource_path("RockScannerLogo.ico")
+def read_file(filename):
+    with open(filename, "r", encoding="utf-8") as f:
+        return f.read()
 
+TESS_PATH = resource_path("tesseract")
+ICON_PATH = resource_path("RockScannerLogo.ico")
+VERSION_PATH = resource_path("version.txt")
+
+VERSION = read_file(VERSION_PATH)
 
 MINING_DATA = {
     3170: "Quantainium", 

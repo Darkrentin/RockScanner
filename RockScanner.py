@@ -5,7 +5,8 @@ import cv2
 import time
 import os
 
-from utils import Style, LOGO_PATH, MINING_DATA, ICON_PATH
+from utils import Style, MINING_DATA, ICON_PATH, VERSION
+
 from scanner import OcrScanner
 
 WIN_H = 150
@@ -19,13 +20,14 @@ MOVE_DELAY = 0.05
 class RockScannerApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("RockScanner")
+        self.title("RockScanner v" + VERSION)
         self.iconbitmap(ICON_PATH)
         self.geometry(str(WIN_W) + "x" + str(WIN_H))
         self.config(bg=Style.BG_COLOR)
         self.attributes("-topmost", True)
         self.current_img_ref = None
-
+        self.scanning_active = False
+        
         self.last_move_time = 0
         self.bind("<Configure>", self.on_window_move)
 
@@ -36,9 +38,19 @@ class RockScannerApp(tk.Tk):
     def on_window_move(self, event):
         self.last_move_time = time.time()
 
+    def toggle_scan(self):
+        self.scanning_active = not self.scanning_active
+        if self.scanning_active:
+            self.toggle_btn.config(text="STOP", bg="#FF3B30")
+            self.status_label.config(text="SCANNING", fg="#FF3B30")
+        else:
+            self.toggle_btn.config(text="SCAN", bg=Style.ACCENT_COLOR)
+            self.status_label.config(text="IDLE", fg="#555")
+            self.update_display(None, [], None)
+
     def setup_ui(self):
         self.status_label = tk.Label(
-            self, text="SEARCHING", fg="#555",
+            self, text="IDLE", fg="#555",
             bg=Style.BG_COLOR, font=(Style.FONT_FAMILY, 12)
         )
         self.status_label.pack(pady=5)
@@ -66,7 +78,20 @@ class RockScannerApp(tk.Tk):
         self.results_area = tk.Frame(self, bg=Style.BG_COLOR)
         self.results_area.pack(fill=tk.X, padx=20, pady=5)
 
+        self.toggle_btn = tk.Button(
+            self, text="SCAN",
+            fg=Style.BG_COLOR, bg=Style.ACCENT_COLOR,
+            font=(Style.FONT_FAMILY, 10, "bold"),
+            relief="flat", padx=16, pady=4,
+            cursor="hand2", command=self.toggle_scan
+        )
+        self.toggle_btn.pack(pady=6)
+
     def scan_loop(self):
+        if not self.scanning_active:
+            self.after(LOOP_DELAY, self.scan_loop)
+            return
+
         if time.time() - self.last_move_time < MOVE_DELAY:
             self.status_label.config(text="PAUSED (MOVING)", fg=Style.ACCENT_COLOR)
             self.after(LOOP_DELAY, self.scan_loop)
