@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/logoRockScanner.png" alt="RockScanner Logo" width="40" align="left">
+<img src="https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/logoRockScanner.png" alt="RockScanner Logo" width="100">
 
 # RockScanner
 
