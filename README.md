@@ -4,6 +4,10 @@
 
 RockScanner is a specialized tool for Star Citizen designed to provide additional data on scanned mineral signatures.
 
+In Star Citizen, scanning a rock signature provides a numerical value that can reveal the mineral type and the number of rocks through simple division. RockScanner simply automates this manual calculation.
+
+> Since it only captures and processes visual data available to the player, it does not violate Cloud Imperium Games' policies regarding third-party external tools.
+
 ## Installation
 
 To install or update RockScanner, download the latest version below:
