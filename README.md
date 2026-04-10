@@ -16,16 +16,22 @@ To install or update RockScanner, download the latest version below:
 
 Run the installer and follow the on-screen instructions.
 
+> Note: Because this is an unsigned independent project, Windows SmartScreen will flag the installer as "Unknown", simply click "More info" and "Run anyway" to proceed safely.
+
 ## How to Use
 
 **RockScanner features 4 distinct states:**
 
-### IDLE State
-In this state, the tool is inactive. This allows you to keep the application open without it scanning your screen.
+### MANUAL State
+In this state, the tool operates in manual mode, requiring you to input the signature value yourself to display the information.
 
-You can enable scanning by toggling the button in the top-left corner when you are ready to mine.
+This serves as a fallback feature for situations where automated detection may struggle, particularly in low-contrast environments where the background color is too close to the text color (e.g., flying in the bright atmosphere of certain planets or moons).
 
-![IDLE](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/IDLE.png)
+You can enable scanning by toggling the button in the top-left corner.
+
+![MANUAL_1](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/MANUAL_1.png)
+
+![MANUAL_2](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/MANUAL_2.png)
 
 ### SCANNING State
 While scanning, the tool monitors the center of your screen to locate the scanned signature UI.
@@ -73,3 +79,12 @@ Signature data is based on the research and charts provided by **MrKraken**.
 - **Low Contrast:** The tool may fail if the color difference between the background (e.g., snow planets) and the signature UI is too low.
 - **Compatibility:** Not all ships have been tested. If the tool fails on a specific ship, please contact me.
 - **Stability:** Capture may take a few moments. Try to keep your view steady to assist the detection process.
+
+### NOTE
+
+I used AI as a coding partner for this project. It helped me refactor the code and optimize the image processing logic. I personally reviewed, refined, and tested every part of the code to ensure its quality and accuracy.
+This collaborative approach allowed for a cleaner and more efficient final tool.
+
+---
+
+<img src="https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/logoMadeByCommunity.png" alt="RockScanner Logo" width="200">
