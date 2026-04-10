@@ -38,6 +38,11 @@ class RockScannerApp(tk.Tk):
         self.scanner = OcrScanner(debug=False)
         self.setup_ui()
 
+        self.ocr_label.grid_remove()
+        self.ocr_entry.grid(row=0, column=0, sticky="w")
+        self.status_label.config(text="MANUAL", fg=Style.ACCENT_COLOR)
+        self.ocr_entry.focus_set()
+
         self._scan_thread = threading.Thread(target=self._scan_worker, daemon=True)
         self._scan_thread.start()
 
@@ -51,10 +56,18 @@ class RockScannerApp(tk.Tk):
         if self.scanning_active:
             self._draw_toggle(active=True)
             self.status_label.config(text="SCANNING", fg="#FF3B30")
+            self.ocr_entry.grid_remove()
+            self.ocr_label.grid(row=0, column=0, sticky="w")
+            self.ocr_label.config(text="-----")
+            self._update_results_only(None, [])
         else:
             self._draw_toggle(active=False)
-            self.status_label.config(text="IDLE", fg="#555")
-            self.update_display(None, [], None)
+            self.status_label.config(text="MANUAL", fg=Style.ACCENT_COLOR)
+            self.ocr_label.grid_remove()
+            self.ocr_entry.grid(row=0, column=0, sticky="w")
+            self._manual_var.set("")
+            self._update_results_only(None, [])
+            self.ocr_entry.focus_set()
 
     def setup_ui(self):
         top_bar = tk.Frame(self, bg=Style.BG_COLOR)
@@ -85,6 +98,21 @@ class RockScannerApp(tk.Tk):
             fg=Style.GOLD_COLOR, bg=Style.BG_COLOR
         )
         self.ocr_label.grid(row=0, column=0, sticky="w")
+
+        self._manual_var = tk.StringVar()
+        self._manual_var.trace_add("write", self._on_manual_input)
+        self.ocr_entry = tk.Entry(
+            self.header,
+            textvariable=self._manual_var,
+            font=(Style.FONT_FAMILY, 24, "bold"),
+            fg=Style.GOLD_COLOR, bg=Style.BG_COLOR,
+            insertbackground=Style.ACCENT_COLOR,
+            relief="flat", bd=0,
+            highlightthickness=0,
+            width=8,
+            disabledforeground="#555",
+            disabledbackground=Style.BG_COLOR,
+        )
 
         self.img_border = tk.Frame(self.header, bg=Style.BLOCK_COLOR, bd=1, relief="solid")
         self.img_border.grid(row=0, column=1, sticky="e")
@@ -123,6 +151,57 @@ class RockScannerApp(tk.Tk):
             knob_x - R + 3, 3, knob_x + R - 5, H - 3,
             fill=knob_color, outline=""
         )
+
+    def _on_manual_input(self, *_):
+        if self.scanning_active:
+            return
+        raw = self._manual_var.get().strip()
+        digits = "".join(filter(str.isdigit, raw))
+        if not digits:
+            self.status_label.config(text="MANUAL", fg=Style.ACCENT_COLOR)
+            self._update_results_only(None, [])
+            return
+        try:
+            val = int(digits)
+        except ValueError:
+            self._update_results_only(None, [])
+            return
+        results = []
+        if val > NUMBER_THRESHOLD:
+            for base, name in MINING_DATA.items():
+                if val % base == 0:
+                    results.append({"name": name, "mult": val // base, "sig": base})
+        results.sort(key=lambda x: x["mult"], reverse=True)
+        if results:
+            self.status_label.config(text="LOCKED", fg="#00FF00")
+        else:
+            self.status_label.config(text="MANUAL", fg=Style.ACCENT_COLOR)
+        self._update_results_only(val, results)
+
+    def _update_results_only(self, number, results):
+        for w in self.results_area.winfo_children():
+            w.destroy()
+        if results:
+            for i, match in enumerate(results):
+                fg_name   = Style.GOLD_COLOR  if i == 0 else "#AAAAAA"
+                fg_sig    = Style.ACCENT_COLOR if i == 0 else "#555555"
+                font_size = 14 if i == 0 else 11
+                line = tk.Frame(self.results_area, bg=Style.BLOCK_COLOR, padx=12, pady=6)
+                line.pack(fill=tk.X, pady=(0, 2))
+                tk.Label(line, text=f"{match['mult']}x {match['name'].upper()}",
+                    fg=fg_name, bg=Style.BLOCK_COLOR,
+                    font=(Style.FONT_FAMILY, font_size, "bold")).pack(side=tk.LEFT)
+                tk.Label(line, text=f"Sig: {match['sig']}",
+                    fg=fg_sig, bg=Style.BLOCK_COLOR,
+                    font=(Style.FONT_FAMILY, 10)).pack(side=tk.RIGHT)
+        else:
+            tk.Label(self.results_area, text="// Undefined //",
+                fg="#444", bg=Style.BLOCK_COLOR,
+                font=(Style.FONT_FAMILY, 11, "italic"),
+                padx=12, pady=10).pack(fill=tk.X)
+        self.update_idletasks()
+        new_h = max(WIN_H, self.winfo_reqheight())
+        self.geometry(f"{WIN_W}x{new_h}")
 
     def _scan_worker(self):
         while True:
