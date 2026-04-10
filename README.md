@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/logoRockScanner.png" alt="RockScanner Logo" width="100">
+<img src="screen/logoRockScanner.png" alt="RockScanner Logo" width="100">
 
 # RockScanner
 
@@ -7,6 +7,10 @@ RockScanner is a specialized tool for Star Citizen designed to provide additiona
 In Star Citizen, scanning a rock signature provides a numerical value that can reveal the mineral type and the number of rocks through simple division. RockScanner simply automates this manual calculation.
 
 > Since it only captures and processes visual data available to the player, it does not violate Cloud Imperium Games' policies regarding third-party external tools.
+
+## DEMO
+
+<img src="screen/RockScannerDemo.gif" width="700">
 
 ## Installation
 
@@ -29,9 +33,9 @@ This serves as a fallback feature for situations where automated detection may s
 
 You can enable scanning by toggling the button in the top-left corner.
 
-![MANUAL_1](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/MANUAL_1.png)
+![MANUAL_1](screen/MANUAL_1.png)
 
-![MANUAL_2](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/MANUAL_2.png)
+![MANUAL_2](screen/MANUAL_2.png)
 
 ### SCANNING State
 While scanning, the tool monitors the center of your screen to locate the scanned signature UI.
@@ -41,7 +45,7 @@ The tool may stay in this state if:
 - The UI cannot be detected. **(Detection may struggle with overly bright backgrounds; it performs best in space.)**
 - The detected signature does not match any known minerals. **(e.g., if you scan a ship or multiple overlapping rocks.)**
 
-![SCANNING](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/SCANNING.png)
+![SCANNING](screen/SCANNING.png)
 
 ### LOCKED State
 This state is reached when a valid mineral signature is detected and identified.
@@ -55,12 +59,12 @@ This state is reached when a valid mineral signature is detected and identified.
 
 > If multiple combinations match the signature, all possibilities will be listed.
 
-![LOCKED](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/LOCKED.png)
+![LOCKED](screen/LOCKED.png)
 
 ### PAUSED State
 To prevent visual stuttering or freezing, the program automatically pauses while the window is being moved.
 
-![PAUSED](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/PAUSED.png)
+![PAUSED](screen/PAUSED.png)
 
 ## How it works
 
@@ -70,7 +74,7 @@ It processes these images using various binarization levels and OCR to extract n
 
 Signature data is based on the research and charts provided by **MrKraken**.
 
-![MrKrakenSigChart](https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/MrKrakenSig.png)
+![MrKrakenSigChart](screen/MrKrakenSig.png)
 
 ---
 
@@ -87,4 +91,4 @@ This collaborative approach allowed for a cleaner and more efficient final tool.
 
 ---
 
-<img src="https://raw.githubusercontent.com/Darkrentin/RockScanner/refs/heads/main/screen/logoMadeByCommunity.png" alt="RockScanner Logo" width="200">
+<img src="screen/logoMadeByCommunity.png" alt="RockScanner Logo" width="200">
