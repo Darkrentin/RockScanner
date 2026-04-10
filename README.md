@@ -10,7 +10,7 @@ In Star Citizen, scanning a rock signature provides a numerical value that can r
 
 ## DEMO
 
-<img src="screen/RockScannerDemo.gif" width="700">
+<img src="screen/RockScannerDemo.gif" width="1000">
 
 ## Installation
 
